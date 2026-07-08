@@ -1,6 +1,8 @@
 package deque;
 
-public class LinkedListDeque<T> {
+import java.util.Iterator;
+
+public class LinkedListDeque<T> implements Deque<T> {
     // 节点类
     private class Node {
         T item;
@@ -21,14 +23,10 @@ public class LinkedListDeque<T> {
         sentinel.next = sentinel;
         size = 0;
     }
-    // 长度查询与判空
+    // 长度查询
     public int size() {
         return this.size;
     }
-    public  boolean isEmpty() {
-        return this.size == 0;
-    }
-    // 首尾节点插入
     public void addFirst(T item) {
         Node oldFirst = sentinel.next;
         Node newFirst = new Node(item, sentinel, oldFirst);
@@ -78,5 +76,44 @@ public class LinkedListDeque<T> {
             current = current.next;
         }
         return current.item;
+    }
+    public void printDeque() {
+        for (int i = 0; i < size; i++) {
+            System.out.print(get(i) + " ");
+        }
+        System.out.println();
+    }
+    private class LinkedListDequeIterator implements Iterator<T> {
+        int pos = 0;
+        public boolean hasNext() {
+            return pos < size;
+        }
+        public T next() {
+            T item = get(pos);
+            pos++;
+            return item;
+        }
+    }
+    public Iterator<T> iterator() {
+        return new LinkedListDeque.LinkedListDequeIterator();
+    }
+    @Override
+    public boolean equals(Object o) {
+        if (o == this) {
+            return true;
+        }
+        if (!(o instanceof Deque)) {
+            return false;
+        }
+        Deque<?> other = (Deque<?>) o;
+        if (this.size() != other.size()) {
+            return false;
+        }
+        for (int i = 0; i < this.size(); i++) {
+            if (!this.get(i).equals(other.get(i))) {
+                return false;
+            }
+        }
+        return true;
     }
 }
