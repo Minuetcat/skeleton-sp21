@@ -27,24 +27,20 @@ public class TimeAList {
         AList<Integer> Ns = new AList<>();
         AList<Double> times = new AList<>();
         AList<Integer> opCounts = new AList<>();
-
-        for (int i = 0; i < sizes.length; i++) {
-            int n = sizes[i];
+        for (int i =0; i < sizes.length; i++) {
+            int size = sizes[i];
+            AList<Integer> testList = new AList<>();
 
             Stopwatch sw = new Stopwatch();
-
-            AList<Integer> testList = new AList<>();
-            for (int j = 0; j < n; j++) {
+            for (int j = 0; j < size; j++) {
                 testList.addLast(j);
             }
+            double testTimes = sw.elapsedTime();
 
-            double timeInSeconds = sw.elapsedTime();
-
-            Ns.addLast(n);
-            times.addLast(timeInSeconds);
-            opCounts.addLast(n);
+            Ns.addLast(size);
+            times.addLast(testTimes);
+            opCounts.addLast(size);
         }
-
         printTimingTable(Ns, times, opCounts);
     }
 }
