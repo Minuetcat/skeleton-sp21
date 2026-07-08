@@ -95,7 +95,7 @@ public class LinkedListDeque<T> implements Deque<T>, Iterable<T> {
         }
     }
     public Iterator<T> iterator() {
-        return new LinkedListDeque.LinkedListDequeIterator();
+        return new LinkedListDequeIterator();
     }
     @Override
     public boolean equals(Object o) {
