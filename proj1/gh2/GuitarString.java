@@ -4,6 +4,8 @@ package gh2;
 // import deque.Deque;
 // TODO: maybe more imports
 
+import deque.ArrayDeque;
+
 //Note: This file will not compile until you complete the Deque implementations
 public class GuitarString {
     /** Constants. Do not change. In case you're curious, the keyword final
@@ -22,6 +24,11 @@ public class GuitarString {
         //       cast the result of this division operation into an int. For
         //       better accuracy, use the Math.round() function before casting.
         //       Your should initially fill your buffer array with zeros.
+        int capacity = (int) Math.round(SR / frequency);
+        ArrayDeque<Double> buffer = new ArrayDeque<>();
+        for (int i = 0; i < capacity; i++) {
+            buffer.addLast(0.0);
+        }
     }
 
 
