@@ -77,6 +77,18 @@ public class LinkedListDeque<T> implements Deque<T>, Iterable<T> {
         }
         return current.item;
     }
+    public T getRecursive(int index) {
+        if (index < 0 || index >= size) {
+        return null;
+        }
+        return helper(sentinel.next, index);
+    }
+    private T helper(Node current, int index) {
+        if (index == 0) {
+            return  current.item;
+        }
+        return helper(current.next, index - 1);
+    }
     public void printDeque() {
         for (int i = 0; i < size; i++) {
             System.out.print(get(i) + " ");
