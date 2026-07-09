@@ -1,5 +1,6 @@
 package bstmap;
 
+import java.security.Key;
 import java.util.Set;
 import java.util.Iterator;
 
@@ -31,7 +32,20 @@ public class BSTMap<K extends Comparable<K>, V> implements Map61B<K, V> {
     }
 
     public boolean containsKey(K key) {
-        return get(key) != null;
+        return containsHelper(root, key);
+    }
+
+    private boolean containsHelper(BSTNode node, K key) {
+        if (node == null) {
+            return false;
+        }
+        if (key.compareTo(node.key) > 0) {
+            return containsHelper(node.right, key);
+        } else if (key.compareTo(node.key) < 0) {
+            return containsHelper(node.left, key);
+        } else {
+            return true;
+        }
     }
 
     public V get(K key) {
