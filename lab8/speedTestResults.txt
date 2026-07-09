@@ -1,0 +1,72 @@
+InsertInOrderSpeedTest
+
+This program inserts lexicographically increasing Strings into Maps as <String, Integer> pairs.
+
+Trial 1:
+ULLMap, 1,111,111 items: Stack Overflow, could not complete
+MyHashMap, 1,111,111 items: 0.36 sec
+Java's built-in HashMap, 1,111,111 items: 0.25 sec
+
+Trial 2:
+ULLMap, 11,111 items: 0.42 sec
+MyHashMap, 11,111,111 items: 2.81 sec
+Java's built-in HashMap, 11,111,111 items: 1.91 sec
+
+Observation:
+MyHashMap is much faster than ULLMap. ULLMap could not handle 1,111,111 insertions and caused a Stack Overflow, while MyHashMap completed the same number of insertions quickly. MyHashMap was also able to handle more than ten million insertions. Java's built-in HashMap was still faster than MyHashMap, which is expected because it is highly optimized.
+
+InsertRandomSpeedTest
+
+This program inserts random Strings of length L into Maps as <String, Integer> pairs.
+
+String length L = 1
+
+Trial 1:
+ULLMap, 1 item: 0.00 sec
+MyHashMap, 1 item: 0.00 sec
+Java's built-in HashMap, 1 item: 0.00 sec
+
+Trial 2:
+ULLMap, 1,111,111 items: 0.06 sec
+MyHashMap, 1,111,111 items: 0.03 sec
+Java's built-in HashMap, 1,111,111 items: 0.03 sec
+
+Observation:
+With L = 1, many random strings are repeated, so this test mostly updates existing keys rather than inserting many distinct keys. In this setting, ULLMap does not become as slow as in the ordered insertion test. MyHashMap and Java's built-in HashMap were still faster than ULLMap. However, this result is a special case because the key space is very small when L = 1.
+
+BucketsSpeedTest
+
+This program inserts random Strings of length L into different types of maps as <String, Integer> pairs.
+
+String length L = 1
+
+Trial 1:
+Number of insertions: 1
+MyHashMapALBuckets: 0.00 sec
+MyHashMapLLBuckets: 0.00 sec
+MyHashMapTSBuckets: 0.00 sec
+MyHashMapHSBuckets: 0.00 sec
+MyHashMapPQBuckets: 0.00 sec
+
+Trial 2:
+Number of insertions: 11,111
+MyHashMapALBuckets: 0.00 sec
+MyHashMapLLBuckets: 0.00 sec
+MyHashMapTSBuckets: 0.00 sec
+MyHashMapHSBuckets: 0.00 sec
+MyHashMapPQBuckets: 0.00 sec
+
+Trial 3:
+Number of insertions: 11,111,111
+MyHashMapALBuckets: 0.22 sec
+MyHashMapLLBuckets: 0.23 sec
+MyHashMapTSBuckets: 0.23 sec
+MyHashMapHSBuckets: 0.52 sec
+MyHashMapPQBuckets: 0.21 sec
+
+Observation:
+For this test with very short strings, ArrayList buckets, LinkedList buckets, TreeSet buckets, and PriorityQueue buckets performed similarly. HashSet buckets were slower in this run. However, since L = 1 creates a very small key space, the result may not represent normal random string behavior with many distinct keys.
+
+Overall Summary
+
+MyHashMap performs much better than ULLMap for large inputs because hashing distributes keys across buckets, so operations do not need to scan one long list. ULLMap becomes slow or even fails for large ordered insertion tests. MyHashMap can handle millions of insertions efficiently, but Java's built-in HashMap is still faster because it is more optimized. The bucket type can affect performance, especially when there are many collisions or repeated keys.
