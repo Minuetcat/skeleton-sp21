@@ -116,6 +116,25 @@ public class Repository {
     }
 
     public static void log() {
+        String currentCommitId = readContentsAsString(HEAD_FILE);
+        while (currentCommitId != null) {
+            File currentCommitFile = join(COMMITS_DIR, currentCommitId);
+            Commit currentCommit = readObject(currentCommitFile, Commit.class);
+
+            System.out.println("===");
+            System.out.println("commit " + currentCommitId);
+            System.out.println("Date: " + currentCommit.getTimestamp());
+            System.out.println(currentCommit.getMessage());
+            System.out.println();
+
+            currentCommitId = currentCommit.getParentId();
+        }
+    }
+
+    public static void checkoutFile(String fileName) {
+        return;
+    }
+    public static void checkoutFileFromCommit(String commitId, String fileName) {
         return;
     }
 }
