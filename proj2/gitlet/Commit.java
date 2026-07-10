@@ -48,4 +48,8 @@ public class Commit implements Serializable {
         String parentForHash = parentId == null ? "" : parentId;
         return sha1(message, timestamp, parentForHash, trackedFiles.toString());
     }
+
+    public HashMap<String, String> getTrackedFiles() {
+        return trackedFiles;
+    }
 }
