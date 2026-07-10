@@ -52,4 +52,16 @@ public class Commit implements Serializable {
     public HashMap<String, String> getTrackedFiles() {
         return trackedFiles;
     }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public String getTimestamp() {
+        return timestamp;
+    }
+
+    public String getParentId() {
+        return parentId;
+    }
 }
