@@ -61,7 +61,7 @@ public class Repository {
             System.out.println("File does not exist.");
             return;
         }
-        
+
         byte[] fileContent = readContents(fileToAdd);
         String blobId = sha1(fileContent);
         HashMap<String, String> stage = readObject(STAGE_FILE, HashMap.class);
@@ -91,7 +91,28 @@ public class Repository {
     }
 
     public static void commit(String message) {
-        return;
+        if (message.equals("")) {
+            System.out.println("Please enter a commit message.");
+            return;
+        }
+        HashMap<String, String> stage = readObject(STAGE_FILE, HashMap.class);
+        if (stage.isEmpty()) {
+            System.out.println("No changes added to the commit.");
+            return;
+        }
+        String headCommitId = readContentsAsString(HEAD_FILE);
+        File headCommitFile = join(COMMITS_DIR, headCommitId);
+        Commit headCommit = readObject(headCommitFile, Commit.class);
+        HashMap<String, String> trackedFiles = headCommit.getTrackedFiles();
+        HashMap<String, String> newTrackedFiles = new HashMap<>(trackedFiles);
+        newTrackedFiles.putAll(stage);
+        Commit newCommit = new Commit(message, headCommitId, newTrackedFiles);
+        String newCommitId = newCommit.getID();
+        File newCommitFile = join(COMMITS_DIR, newCommitId);
+        writeObject(newCommitFile, newCommit);
+        writeContents(HEAD_FILE, newCommitId);
+        HashMap<String, String> emptyStage = new HashMap<>();
+        writeObject(STAGE_FILE, emptyStage);
     }
 
     public static void log() {
