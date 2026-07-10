@@ -51,13 +51,17 @@ public class Main {
                 }
                 Repository.log();
                 break;
-//            case "checkout":
-//                if(args.length != 2) {
-//                    System.out.println("Incorrect operands.");
-//                    return;
-//                }
-//                Repository.checkout(args[1]);
-//                break;
+            case "checkout":
+                if(args.length == 3 && args[1].equals("--")) {
+                    Repository.checkoutFile(args[2]);
+                    return;
+                } else if (args.length == 4 && args[2].equals("--")) {
+                    Repository.checkoutFileFromCommit(args[1], args[3]);
+                    return;
+                } else {
+                    System.out.println("Incorrect operands.");
+                    return;
+                }
             default:
                 System.out.println("No command with that name exists.");
                 return;
