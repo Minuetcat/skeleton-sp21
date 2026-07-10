@@ -2,10 +2,12 @@ package gitlet;
 
 // TODO: any imports you need here
 
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import static gitlet.Utils.*;
 import java.io.Serializable;
+import java.util.Locale;
 
 /** Represents a gitlet commit object.
  *  TODO: It's a good idea to give a description here of what else this Class
@@ -39,7 +41,8 @@ public class Commit implements Serializable {
     public Commit(String message, String parentId, HashMap<String, String> trackedFiles) {
         this.message = message;
         Date date = new Date();
-        this.timestamp = date.toString();
+        SimpleDateFormat formatter = new SimpleDateFormat("EEE MMM d HH:mm:ss yyyy Z", Locale.US);
+        this.timestamp = formatter.format(date);
         this.parentId = parentId;
         this.trackedFiles = new HashMap<>(trackedFiles);
     }
