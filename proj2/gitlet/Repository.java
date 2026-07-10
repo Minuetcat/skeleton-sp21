@@ -66,9 +66,7 @@ public class Repository {
         String blobId = sha1(fileContent);
         HashMap<String, String> stage = readObject(STAGE_FILE, HashMap.class);
 
-        String headCommitId = readContentsAsString(HEAD_FILE);
-        File headCommitFile = join(COMMITS_DIR, headCommitId);
-        Commit headCommit = readObject(headCommitFile, Commit.class);
+        Commit headCommit = getHeadCommit();
         HashMap<String, String> trackedFiles = headCommit.getTrackedFiles();
 
         if (trackedFiles.containsKey(fileName)) {
@@ -100,13 +98,11 @@ public class Repository {
             System.out.println("No changes added to the commit.");
             return;
         }
-        String headCommitId = readContentsAsString(HEAD_FILE);
-        File headCommitFile = join(COMMITS_DIR, headCommitId);
-        Commit headCommit = readObject(headCommitFile, Commit.class);
+        Commit headCommit = getHeadCommit();
         HashMap<String, String> trackedFiles = headCommit.getTrackedFiles();
         HashMap<String, String> newTrackedFiles = new HashMap<>(trackedFiles);
         newTrackedFiles.putAll(stage);
-        Commit newCommit = new Commit(message, headCommitId, newTrackedFiles);
+        Commit newCommit = new Commit(message, readContentsAsString(HEAD_FILE), newTrackedFiles);
         String newCommitId = newCommit.getID();
         File newCommitFile = join(COMMITS_DIR, newCommitId);
         writeObject(newCommitFile, newCommit);
@@ -132,9 +128,38 @@ public class Repository {
     }
 
     public static void checkoutFile(String fileName) {
+        Commit headCommit = getHeadCommit();
+        restoreFileFromCommit(headCommit, fileName);
         return;
     }
+
     public static void checkoutFileFromCommit(String commitId, String fileName) {
+        File commitFile = join(COMMITS_DIR, commitId);
+        if (!commitFile.exists()) {
+            System.out.println("No commit with that id exists.");
+            return;
+        }
+        Commit commit = readObject(commitFile, Commit.class);
+        restoreFileFromCommit(commit, fileName);
         return;
+    }
+
+    private static void restoreFileFromCommit(Commit commit, String fileName) {
+        HashMap<String, String> trackedFiles = commit.getTrackedFiles();
+        if (!trackedFiles.containsKey(fileName)) {
+            System.out.println("File does not exist in that commit.");
+        } else {
+            String blobId = trackedFiles.get(fileName);
+            File blobFile = join(BLOBS_DIR, blobId);
+            byte[] fileContent = readContents(blobFile);
+            File outputFile = join(CWD, fileName);
+            writeContents(outputFile, fileContent);
+        }
+    }
+
+    private static Commit getHeadCommit() {
+        String headCommitId = readContentsAsString(HEAD_FILE);
+        File headCommitFile = join(COMMITS_DIR, headCommitId);
+        return readObject(headCommitFile, Commit.class);
     }
 }
