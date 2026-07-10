@@ -56,17 +56,36 @@ public class Repository {
 
     public static void add(String fileName) {
         File fileToAdd = join(CWD, fileName);
+
         if (!fileToAdd.exists()) {
             System.out.println("File does not exist.");
             return;
         }
+        
         byte[] fileContent = readContents(fileToAdd);
         String blobId = sha1(fileContent);
+        HashMap<String, String> stage = readObject(STAGE_FILE, HashMap.class);
+
+        String headCommitId = readContentsAsString(HEAD_FILE);
+        File headCommitFile = join(COMMITS_DIR, headCommitId);
+        Commit headCommit = readObject(headCommitFile, Commit.class);
+        HashMap<String, String> trackedFiles = headCommit.getTrackedFiles();
+
+        if (trackedFiles.containsKey(fileName)) {
+            String trackedBlobId = trackedFiles.get(fileName);
+
+            if (trackedBlobId.equals(blobId)) {
+                stage.remove(fileName);
+                writeObject(STAGE_FILE, stage);
+                return;
+            }
+        }
         File blobFile = join(BLOBS_DIR, blobId);
+
         if (!blobFile.exists()) {
             writeContents(blobFile, fileContent);
         }
-        HashMap<String, String> stage = readObject(STAGE_FILE, HashMap.class);
+
         stage.put(fileName, blobId);
         writeObject(STAGE_FILE, stage);
     }
