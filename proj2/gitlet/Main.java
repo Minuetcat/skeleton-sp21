@@ -21,13 +21,13 @@ public class Main {
         }
         switch(firstArg) {
             case "init":
-                // TODO: handle the `init` command
                 if(args.length != 1) {
                     System.out.println("Incorrect operands.");
                     return;
                 }
                 Repository.init();
                 break;
+
             case "rm":
                 if (args.length != 2) {
                     System.out.println("Incorrect operands.");
@@ -35,15 +35,23 @@ public class Main {
                 }
                 Repository.rm(args[1]);
                 break;
+
             case "add":
-                // TODO: handle the `add [filename]` command
                 if (args.length != 2) {
                     System.out.println("Incorrect operands.");
                     return;
                 }
                 Repository.add(args[1]);
                 break;
-            // TODO: FILL THE REST IN
+
+            case "find":
+                if (args.length != 2) {
+                    System.out.println("Incorrect operands.");
+                    return;
+                }
+                Repository.find(args[1]);
+                break;
+
             case "commit":
                 if (args.length != 2) {
                     System.out.println("Incorrect operands.");
@@ -51,6 +59,7 @@ public class Main {
                 }
                 Repository.commit(args[1]);
                 break;
+
             case "log":
                 if (args.length != 1) {
                     System.out.println("Incorrect operands.");
@@ -58,6 +67,15 @@ public class Main {
                 }
                 Repository.log();
                 break;
+
+            case "global-log":
+                if (args.length != 1) {
+                    System.out.println("Incorrect operands.");
+                    return;
+                }
+                Repository.globalLog();
+                break;
+
             case "checkout":
                 if (args.length == 3 && args[1].equals("--")) {
                     Repository.checkoutFile(args[2]);
@@ -69,6 +87,7 @@ public class Main {
                     System.out.println("Incorrect operands.");
                     return;
                 }
+
             default:
                 System.out.println("No command with that name exists.");
                 return;
