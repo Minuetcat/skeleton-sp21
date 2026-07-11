@@ -221,6 +221,26 @@ public class Repository {
                 return;
             }
         }
+
+        for (String fileName : targetTrackedFiles.keySet()) {
+            String blobId = targetTrackedFiles.get(fileName);
+            File blobFile = join(BLOBS_DIR, blobId);
+            byte[] fileContent = readContents(blobFile);
+            File workingFile = join(CWD, fileName);
+            writeContents(workingFile, fileContent);
+        }
+        for (String fileName : currentTrackedFiles.keySet()) {
+            if (!targetTrackedFiles.containsKey(fileName)) {
+                File workingFile = join(CWD, fileName);
+                restrictedDelete(workingFile);
+            }
+        }
+
+        writeContents(HEAD_FILE, branchName);
+        HashMap<String, String> emptyStageAdd = new HashMap<>();
+        writeObject(STAGE_ADD_FILE, emptyStageAdd);
+        HashSet<String> emptyStageRemove = new HashSet<>();
+        writeObject(STAGE_REMOVE_FILE, emptyStageRemove);
     }
 
     public static void checkoutFileFromCommit(String commitId, String fileName) {
