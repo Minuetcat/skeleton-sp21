@@ -28,9 +28,16 @@ public class Main {
                 }
                 Repository.init();
                 break;
+            case "rm":
+                if (args.length != 2) {
+                    System.out.println("Incorrect operands.");
+                    return;
+                }
+                Repository.rm(args[1]);
+                break;
             case "add":
                 // TODO: handle the `add [filename]` command
-                if(args.length != 2) {
+                if (args.length != 2) {
                     System.out.println("Incorrect operands.");
                     return;
                 }
@@ -38,21 +45,21 @@ public class Main {
                 break;
             // TODO: FILL THE REST IN
             case "commit":
-                if(args.length != 2) {
+                if (args.length != 2) {
                     System.out.println("Incorrect operands.");
                     return;
                 }
                 Repository.commit(args[1]);
                 break;
             case "log":
-                if(args.length != 1) {
+                if (args.length != 1) {
                     System.out.println("Incorrect operands.");
                     return;
                 }
                 Repository.log();
                 break;
             case "checkout":
-                if(args.length == 3 && args[1].equals("--")) {
+                if (args.length == 3 && args[1].equals("--")) {
                     Repository.checkoutFile(args[2]);
                     return;
                 } else if (args.length == 4 && args[2].equals("--")) {
