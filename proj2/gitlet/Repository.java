@@ -53,6 +53,31 @@ public class Repository {
         writeContents(HEAD_FILE, initialCommitId);
     }
 
+    public static void rm(String fileName) {
+        HashMap<String, String> stageAdd = readObject(STAGE_ADD_FILE, HashMap.class);
+        Commit headCommit = getHeadCommit();
+        HashMap<String, String> trackedFiles = headCommit.getTrackedFiles();
+
+        boolean stagedForAddition = stageAdd.containsKey(fileName);
+        boolean trackedByHead = trackedFiles.containsKey(fileName);
+
+        if (!stagedForAddition && !trackedByHead) {
+            System.out.println("No reason to remove the file.");
+            return;
+        }
+        if (stagedForAddition) {
+            stageAdd.remove(fileName);
+            writeObject(STAGE_ADD_FILE, stageAdd);
+        }
+        if (trackedByHead) {
+            HashSet<String> stageRemove = readObject(STAGE_REMOVE_FILE, HashSet.class);
+            stageRemove.add(fileName);
+            writeObject(STAGE_REMOVE_FILE, stageRemove);
+            File workingFile = join(CWD, fileName);
+            restrictedDelete(workingFile);
+        }
+    }
+
     public static void add(String fileName) {
         File fileToAdd = join(CWD, fileName);
         if (!fileToAdd.exists()) {
@@ -164,30 +189,5 @@ public class Repository {
         String headCommitId = readContentsAsString(HEAD_FILE);
         File headCommitFile = join(COMMITS_DIR, headCommitId);
         return readObject(headCommitFile, Commit.class);
-    }
-
-    public static void rm(String fileName) {
-        HashMap<String, String> stageAdd = readObject(STAGE_ADD_FILE, HashMap.class);
-        Commit headCommit = getHeadCommit();
-        HashMap<String, String> trackedFiles = headCommit.getTrackedFiles();
-
-        boolean stagedForAddition = stageAdd. containsKey(fileName);
-        boolean trackedByHead = trackedFiles.containsKey(fileName);
-
-        if (!stagedForAddition && !trackedByHead) {
-            System.out.println("No reason to remove the file.");
-            return;
-        }
-        if (stagedForAddition) {
-            stageAdd. remove(fileName);
-            writeObject(STAGE_ADD_FILE, stageAdd);
-        }
-        if (trackedByHead) {
-            HashSet<String> stageRemove = readObject(STAGE_REMOVE_FILE, HashSet.class);
-            stageRemove.add(fileName);
-            writeObject(STAGE_REMOVE_FILE, stageRemove);
-            File workingFile = join(CWD, fileName);
-            restrictedDelete(workingFile);
-        }
     }
 }
