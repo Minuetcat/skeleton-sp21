@@ -373,7 +373,9 @@ public class Repository {
             boolean trackedByTarget = targetTrackedFiles.containsKey(fileName);
 
             if (!trackedByCurrent && trackedByTarget) {
-                System.out.println("There is an untracked file in the way; " + "delete it, or add and commit it first.");
+                System.out.println(
+                        "There is an untracked file in the way; "
+                                + "delete it, or add and commit it first.");
                 return;
             }
         }
@@ -426,10 +428,129 @@ public class Repository {
             boolean trackedByTarget = targetTrackedFiles.containsKey(fileName);
 
             if (!trackedByCurrent && trackedByTarget) {
-                System.out.println("There is an untracked file in the way; " + "delete it, or add and commit it first.");
+                System.out.println(
+                        "There is an untracked file in the way; "
+                                + "delete it, or add and commit it first.");
                 return;
             }
 
         }
+        String currentCommitId = getCurrentCommitId();
+        String splitPointId = findSplitPoint(currentCommitId, givenCommitId);
+
+        if (splitPointId.equals(givenCommitId)) {
+            System.out.println("Given branch is an ancestor of the current branch.");
+            return;
+        }
+
+        if (splitPointId.equals(currentCommitId)) {
+            for (String fileName : targetTrackedFiles.keySet()) {
+                restoreFileFromCommit(givenCommit, fileName);
+            }
+            for (String fileName : currentTrackedFiles.keySet()) {
+                if (!targetTrackedFiles.containsKey(fileName)) {
+                    File workingFile = join(CWD, fileName);
+                    restrictedDelete(workingFile);
+                }
+            }
+            File currentBranchFile = getCurrentBranchFile();
+            writeContents(currentBranchFile, givenCommitId);
+            HashMap<String, String> emptyStageAdd = new HashMap<>();
+            writeObject(STAGE_ADD_FILE, emptyStageAdd);
+            HashSet<String> emptyStageRemove = new HashSet<>();
+            writeObject(STAGE_REMOVE_FILE, emptyStageRemove);
+            System.out.println("Current branch fast-forwarded.");
+            return;
+        }
+        File splitPointFile = join(COMMITS_DIR, splitPointId);
+        Commit splitPointCommit = readObject(splitPointFile, Commit.class);
+        HashMap<String, String> splitTrackedFiles = splitPointCommit.getTrackedFiles();
+        HashSet<String> allFileNames = new HashSet<>();
+        allFileNames.addAll(splitTrackedFiles.keySet());
+        allFileNames.addAll(currentTrackedFiles.keySet());
+        allFileNames.addAll(targetTrackedFiles.keySet());
+
+        boolean conflictOccurred = false;
+
+        for (String fileName : allFileNames) {
+            String splitBlobId = splitTrackedFiles.get(fileName);
+            String currentBlobId = currentTrackedFiles.get(fileName);
+            String givenBlobId = targetTrackedFiles.get(fileName);
+
+            boolean currentChanged =
+                    !Objects.equals(splitBlobId, currentBlobId);
+            boolean givenChanged =
+                    !Objects.equals(splitBlobId, givenBlobId);
+            boolean currentGivenDifferent =
+                    !Objects.equals(currentBlobId, givenBlobId);
+
+            if (!currentChanged && givenChanged) {
+                if (givenBlobId == null) {
+                    rm(fileName);
+                } else {
+                    restoreFileFromCommit(givenCommit, fileName);
+                    add(fileName);
+                }
+            } else if (currentChanged
+                    && givenChanged
+                    && currentGivenDifferent) {
+                conflictOccurred = true;
+
+                String currentContent = "";
+                if (currentBlobId != null) {
+                    File currentBlobFile = join(BLOBS_DIR, currentBlobId);
+                    currentContent = readContentsAsString(currentBlobFile);
+                }
+
+                String givenContent = "";
+                if (givenBlobId != null) {
+                    File givenBlobFile = join(BLOBS_DIR, givenBlobId);
+                    givenContent = readContentsAsString(givenBlobFile);
+                }
+
+                String conflictContent =
+                        "<<<<<<< HEAD\n"
+                                + currentContent
+                                + "=======\n"
+                                + givenContent
+                                + ">>>>>>>\n";
+
+                File workingFile = join(CWD, fileName);
+                writeContents(workingFile, conflictContent);
+                add(fileName);
+            }
+        }
+        String mergeMessage =
+                "Merged " + branchName + " into "
+                        + currentBranchName + ".";
+
+        commit(mergeMessage);
+
+        if (conflictOccurred) {
+            System.out.println("Encountered a merge conflict.");
+        }
+
+    }
+
+    private static String findSplitPoint(String currentCommitId, String givenCommitId) {
+        HashSet<String> currentAncestors = new HashSet<>();
+        while (currentCommitId != null) {
+            currentAncestors.add(currentCommitId);
+            File currentCommitFile = join(COMMITS_DIR, currentCommitId);
+            Commit currentCommit = readObject(currentCommitFile, Commit.class);
+            currentCommitId = currentCommit.getParentId();
+        }
+
+        String searchCommitId = givenCommitId;
+        while (searchCommitId != null) {
+            if (currentAncestors.contains(searchCommitId)) {
+                return searchCommitId;
+            }
+            File searchCommitFile = join(COMMITS_DIR, searchCommitId);
+            Commit searchCommit = readObject(searchCommitFile, Commit.class);
+            searchCommitId = searchCommit.getParentId();
+        }
+
+        return null;
     }
 }
