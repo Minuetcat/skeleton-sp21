@@ -196,7 +196,7 @@ public class Repository {
 
     public static void checkoutBranch(String branchName) {
         File branchFile = join(BRANCHES_DIR, branchName);
-        if (branchFile.exists()) {
+        if (!branchFile.exists()) {
             System.out.println("No such branch exists.");
             return;
         }
@@ -210,6 +210,17 @@ public class Repository {
         Commit currentCommit = getHeadCommit();
         HashMap<String, String> targetTrackedFiles = targetCommit.getTrackedFiles();
         HashMap<String, String> currentTrackedFiles = currentCommit.getTrackedFiles();
+
+        List<String> workingFileNames = plainFilenamesIn(CWD);
+        for (String fileName : workingFileNames) {
+            boolean trackedByCurrent = currentTrackedFiles.containsKey(fileName);
+            boolean trackedByTarget = targetTrackedFiles.containsKey(fileName);
+
+            if (!trackedByCurrent && trackedByTarget) {
+                System.out.println("There is an untracked file in the way; delete it, or add and commit it first.");
+                return;
+            }
+        }
     }
 
     public static void checkoutFileFromCommit(String commitId, String fileName) {
