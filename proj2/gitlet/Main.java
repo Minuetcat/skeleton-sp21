@@ -1,7 +1,7 @@
 package gitlet;
 
 /** Driver class for Gitlet, a subset of the Git version-control system.
- *  @author TODO
+ *  @author minuet
  */
 public class Main {
 
@@ -9,7 +9,6 @@ public class Main {
      *  <COMMAND> <OPERAND1> <OPERAND2> ... 
      */
     public static void main(String[] args) {
-        // TODO: what if args is empty?
         if (args.length == 0) {
             System.out.println("Please enter a command.");
             return;
@@ -51,7 +50,7 @@ public class Main {
                 }
                 Repository.status();
                 break;
-                
+
             case "rm":
                 if (args.length != 2) {
                     System.out.println("Incorrect operands.");
@@ -90,6 +89,14 @@ public class Main {
                     return;
                 }
                 Repository.branch(args[1]);
+                break;
+
+            case "rm-branch":
+                if (args.length != 2) {
+                    System.out.println("Incorrect operands.");
+                    return;
+                }
+                Repository.rmBranch(args[1]);
                 break;
 
             case "checkout":
