@@ -99,6 +99,14 @@ public class Main {
                 Repository.rmBranch(args[1]);
                 break;
 
+            case "reset":
+                if (args.length != 2) {
+                    System.out.println("Incorrect operands.");
+                    return;
+                }
+                Repository.reset(args[1]);
+                break;
+
             case "checkout":
                 if (args.length == 3 && args[1].equals("--")) {
                     Repository.checkoutFile(args[2]);
