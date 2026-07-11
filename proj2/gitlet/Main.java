@@ -28,6 +28,30 @@ public class Main {
                 Repository.init();
                 break;
 
+            case "log":
+                if (args.length != 1) {
+                    System.out.println("Incorrect operands.");
+                    return;
+                }
+                Repository.log();
+                break;
+
+            case "global-log":
+                if (args.length != 1) {
+                    System.out.println("Incorrect operands.");
+                    return;
+                }
+                Repository.globalLog();
+                break;
+
+            case "status":
+                if (args.length != 1) {
+                    System.out.println("Incorrect operands.");
+                    return;
+                }
+                Repository.status();
+                break;
+                
             case "rm":
                 if (args.length != 2) {
                     System.out.println("Incorrect operands.");
@@ -60,20 +84,12 @@ public class Main {
                 Repository.commit(args[1]);
                 break;
 
-            case "log":
-                if (args.length != 1) {
+            case "branch":
+                if (args.length != 2) {
                     System.out.println("Incorrect operands.");
                     return;
                 }
-                Repository.log();
-                break;
-
-            case "global-log":
-                if (args.length != 1) {
-                    System.out.println("Incorrect operands.");
-                    return;
-                }
-                Repository.globalLog();
+                Repository.branch(args[1]);
                 break;
 
             case "checkout":
