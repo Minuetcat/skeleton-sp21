@@ -396,4 +396,40 @@ public class Repository {
         HashSet<String> emptyStageRemove = new HashSet<>();
         writeObject(STAGE_REMOVE_FILE, emptyStageRemove);
     }
+
+    public static void merge(String branchName) {
+        HashMap<String, String> stageAdd = readObject(STAGE_ADD_FILE, HashMap.class);
+        HashSet<String> stageRemove = readObject(STAGE_REMOVE_FILE, HashSet.class);
+        if (!stageAdd.isEmpty() || !stageRemove.isEmpty()) {
+            System.out.println("You have uncommitted changes.");
+            return;
+        }
+        File givenBranchFile = join(BRANCHES_DIR, branchName);
+        if (!givenBranchFile.exists()) {
+            System.out.println("A branch with that name does not exist.");
+            return;
+        }
+        String currentBranchName = getCurrentBranchName();
+        if (currentBranchName.equals(branchName)) {
+            System.out.println("Cannot merge a branch with itself.");
+            return;
+        }
+        String givenCommitId = readContentsAsString(givenBranchFile);
+        File givenCommitFile = join(COMMITS_DIR, givenCommitId);
+        Commit givenCommit = readObject(givenCommitFile, Commit.class);
+        Commit currentCommit = getHeadCommit();
+        HashMap<String, String> targetTrackedFiles = givenCommit.getTrackedFiles();
+        HashMap<String, String> currentTrackedFiles = currentCommit.getTrackedFiles();
+        List<String> workingFileNames = plainFilenamesIn(CWD);
+        for (String fileName : workingFileNames) {
+            boolean trackedByCurrent = currentTrackedFiles.containsKey(fileName);
+            boolean trackedByTarget = targetTrackedFiles.containsKey(fileName);
+
+            if (!trackedByCurrent && trackedByTarget) {
+                System.out.println("There is an untracked file in the way; " + "delete it, or add and commit it first.");
+                return;
+            }
+
+        }
+    }
 }
