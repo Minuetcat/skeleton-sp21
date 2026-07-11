@@ -2,10 +2,8 @@ package gitlet;
 
 import java.io.File;
 import java.util.HashMap;
-
+import java.util.HashSet;
 import static gitlet.Utils.*;
-
-// TODO: any imports you need here
 
 /** Represents a gitlet repository.
  *  TODO: It's a good idea to give a description here of what else this Class
@@ -32,11 +30,10 @@ public class Repository {
     public static final File GITLET_DIR = join(CWD, ".gitlet");
     public static final File COMMITS_DIR = join(GITLET_DIR, "commits");
     public static final File BLOBS_DIR = join(GITLET_DIR, "blobs");
-    public static final File STAGE_FILE = join(GITLET_DIR, "stage");
+    public static final File STAGE_ADD_FILE = join(GITLET_DIR, "stageAdd");
+    public static final File STAGE_REMOVE_FILE = join(GITLET_DIR, "stageRemove");
     public static final File HEAD_FILE = join(GITLET_DIR, "HEAD");
 
-
-    /* TODO: fill in the rest of this class. */
     public static void init() {
         if (GITLET_DIR.exists()) {
             System.out.println("A Gitlet version-control system already exists in the current directory.");
@@ -45,8 +42,10 @@ public class Repository {
         GITLET_DIR.mkdir();
         COMMITS_DIR.mkdir();
         BLOBS_DIR.mkdir();
-        HashMap<String, String> stage = new HashMap<>();
-        writeObject(STAGE_FILE, stage);
+        HashMap<String, String> stageAdd = new HashMap<>();
+        HashSet<String> stageRemove = new HashSet<>();
+        writeObject(STAGE_ADD_FILE, stageAdd);
+        writeObject(STAGE_REMOVE_FILE, stageRemove);
         Commit initialCommit = new Commit();
         String initialCommitId = initialCommit.getID();
         File initialCommitFile = join(COMMITS_DIR, initialCommitId);
@@ -56,36 +55,34 @@ public class Repository {
 
     public static void add(String fileName) {
         File fileToAdd = join(CWD, fileName);
-
         if (!fileToAdd.exists()) {
             System.out.println("File does not exist.");
             return;
         }
-
         byte[] fileContent = readContents(fileToAdd);
         String blobId = sha1(fileContent);
-        HashMap<String, String> stage = readObject(STAGE_FILE, HashMap.class);
-
+        HashMap<String, String> stageAdd = readObject(STAGE_ADD_FILE, HashMap.class);
+        HashSet<String> stageRemove = readObject(STAGE_REMOVE_FILE, HashSet.class);
+        if (stageRemove.contains(fileName)) {
+            stageRemove.remove(fileName);
+            writeObject(STAGE_REMOVE_FILE, stageRemove);
+        }
         Commit headCommit = getHeadCommit();
         HashMap<String, String> trackedFiles = headCommit.getTrackedFiles();
-
         if (trackedFiles.containsKey(fileName)) {
             String trackedBlobId = trackedFiles.get(fileName);
-
             if (trackedBlobId.equals(blobId)) {
-                stage.remove(fileName);
-                writeObject(STAGE_FILE, stage);
+                stageAdd.remove(fileName);
+                writeObject(STAGE_ADD_FILE, stageAdd);
                 return;
             }
         }
         File blobFile = join(BLOBS_DIR, blobId);
-
         if (!blobFile.exists()) {
             writeContents(blobFile, fileContent);
         }
-
-        stage.put(fileName, blobId);
-        writeObject(STAGE_FILE, stage);
+        stageAdd.put(fileName, blobId);
+        writeObject(STAGE_ADD_FILE, stageAdd);
     }
 
     public static void commit(String message) {
@@ -93,22 +90,28 @@ public class Repository {
             System.out.println("Please enter a commit message.");
             return;
         }
-        HashMap<String, String> stage = readObject(STAGE_FILE, HashMap.class);
-        if (stage.isEmpty()) {
+        HashMap<String, String> stageAdd = readObject(STAGE_ADD_FILE, HashMap.class);
+        HashSet<String> stageRemove = readObject(STAGE_REMOVE_FILE, HashSet.class);
+        if (stageAdd.isEmpty() && stageRemove.isEmpty()) {
             System.out.println("No changes added to the commit.");
             return;
         }
         Commit headCommit = getHeadCommit();
         HashMap<String, String> trackedFiles = headCommit.getTrackedFiles();
         HashMap<String, String> newTrackedFiles = new HashMap<>(trackedFiles);
-        newTrackedFiles.putAll(stage);
+        newTrackedFiles.putAll(stageAdd);
+        for (String fileName : stageRemove) {
+            newTrackedFiles.remove(fileName);
+        }
         Commit newCommit = new Commit(message, readContentsAsString(HEAD_FILE), newTrackedFiles);
         String newCommitId = newCommit.getID();
         File newCommitFile = join(COMMITS_DIR, newCommitId);
         writeObject(newCommitFile, newCommit);
         writeContents(HEAD_FILE, newCommitId);
-        HashMap<String, String> emptyStage = new HashMap<>();
-        writeObject(STAGE_FILE, emptyStage);
+        HashMap<String, String> emptyStageAdd = new HashMap<>();
+        writeObject(STAGE_ADD_FILE, emptyStageAdd);
+        HashSet<String> emptyStageRemove = new HashSet<>();
+        writeObject(STAGE_REMOVE_FILE, emptyStageRemove);
     }
 
     public static void log() {
@@ -161,5 +164,30 @@ public class Repository {
         String headCommitId = readContentsAsString(HEAD_FILE);
         File headCommitFile = join(COMMITS_DIR, headCommitId);
         return readObject(headCommitFile, Commit.class);
+    }
+
+    public static void rm(String fileName) {
+        HashMap<String, String> stageAdd = readObject(STAGE_ADD_FILE, HashMap.class);
+        Commit headCommit = getHeadCommit();
+        HashMap<String, String> trackedFiles = headCommit.getTrackedFiles();
+
+        boolean stagedForAddition = stageAdd. containsKey(fileName);
+        boolean trackedByHead = trackedFiles.containsKey(fileName);
+
+        if (!stagedForAddition && !trackedByHead) {
+            System.out.println("No reason to remove the file.");
+            return;
+        }
+        if (stagedForAddition) {
+            stageAdd. remove(fileName);
+            writeObject(STAGE_ADD_FILE, stageAdd);
+        }
+        if (trackedByHead) {
+            HashSet<String> stageRemove = readObject(STAGE_REMOVE_FILE, HashSet.class);
+            stageRemove.add(fileName);
+            writeObject(STAGE_REMOVE_FILE, stageRemove);
+            File workingFile = join(CWD, fileName);
+            restrictedDelete(workingFile);
+        }
     }
 }
