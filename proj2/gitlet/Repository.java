@@ -148,12 +148,7 @@ public class Repository {
             File currentCommitFile = join(COMMITS_DIR, currentCommitId);
             Commit currentCommit = readObject(currentCommitFile, Commit.class);
 
-            System.out.println("===");
-            System.out.println("commit " + currentCommitId);
-            System.out.println("Date: " + currentCommit.getTimestamp());
-            System.out.println(currentCommit.getMessage());
-            System.out.println();
-
+            printCommit(currentCommitId, currentCommit);
             currentCommitId = currentCommit.getParentId();
         }
     }
@@ -163,12 +158,7 @@ public class Repository {
         for (String commitFileName : commitFileNames) {
             File commitFile = join(COMMITS_DIR, commitFileName);
             Commit commit = readObject(commitFile, Commit.class);
-
-            System.out.println("===");
-            System.out.println("commit " + commitFileName);
-            System.out.println("Date: " + commit.getTimestamp());
-            System.out.println(commit.getMessage());
-            System.out.println();
+            printCommit(commitFileName, commit);
         }
     }
 
@@ -400,82 +390,84 @@ public class Repository {
     }
 
     public static void merge(String branchName) {
-        HashMap<String, String> stageAdd = readObject(STAGE_ADD_FILE, HashMap.class);
-        HashSet<String> stageRemove = readObject(STAGE_REMOVE_FILE, HashSet.class);
+        HashMap<String, String> stageAdd =
+                readObject(STAGE_ADD_FILE, HashMap.class);
+        HashSet<String> stageRemove =
+                readObject(STAGE_REMOVE_FILE, HashSet.class);
         if (!stageAdd.isEmpty() || !stageRemove.isEmpty()) {
             System.out.println("You have uncommitted changes.");
             return;
         }
+
         File givenBranchFile = join(BRANCHES_DIR, branchName);
         if (!givenBranchFile.exists()) {
             System.out.println("A branch with that name does not exist.");
             return;
         }
+
         String currentBranchName = getCurrentBranchName();
         if (currentBranchName.equals(branchName)) {
             System.out.println("Cannot merge a branch with itself.");
             return;
         }
+
+        String currentCommitId = getCurrentCommitId();
         String givenCommitId = readContentsAsString(givenBranchFile);
-        File givenCommitFile = join(COMMITS_DIR, givenCommitId);
-        Commit givenCommit = readObject(givenCommitFile, Commit.class);
         Commit currentCommit = getHeadCommit();
-        HashMap<String, String> targetTrackedFiles = givenCommit.getTrackedFiles();
-        HashMap<String, String> currentTrackedFiles = currentCommit.getTrackedFiles();
+        Commit givenCommit = readObject(
+                join(COMMITS_DIR, givenCommitId), Commit.class);
+
+        HashMap<String, String> currentTrackedFiles =
+                currentCommit.getTrackedFiles();
+        HashMap<String, String> givenTrackedFiles =
+                givenCommit.getTrackedFiles();
+
         List<String> workingFileNames = plainFilenamesIn(CWD);
         for (String fileName : workingFileNames) {
-            boolean trackedByCurrent = currentTrackedFiles.containsKey(fileName);
-            boolean trackedByTarget = targetTrackedFiles.containsKey(fileName);
-
-            if (!trackedByCurrent && trackedByTarget) {
+            boolean trackedByCurrent =
+                    currentTrackedFiles.containsKey(fileName);
+            boolean trackedByGiven = givenTrackedFiles.containsKey(fileName);
+            if (!trackedByCurrent && trackedByGiven) {
                 System.out.println(
                         "There is an untracked file in the way; "
                                 + "delete it, or add and commit it first.");
                 return;
             }
-
         }
-        String currentCommitId = getCurrentCommitId();
-        String splitPointId = findSplitPoint(currentCommitId, givenCommitId);
+
+        String splitPointId =
+                findSplitPoint(currentCommitId, givenCommitId);
 
         if (splitPointId.equals(givenCommitId)) {
-            System.out.println("Given branch is an ancestor of the current branch.");
+            System.out.println(
+                    "Given branch is an ancestor of the current branch.");
             return;
         }
 
         if (splitPointId.equals(currentCommitId)) {
-            for (String fileName : targetTrackedFiles.keySet()) {
-                restoreFileFromCommit(givenCommit, fileName);
-            }
-            for (String fileName : currentTrackedFiles.keySet()) {
-                if (!targetTrackedFiles.containsKey(fileName)) {
-                    File workingFile = join(CWD, fileName);
-                    restrictedDelete(workingFile);
-                }
-            }
-            File currentBranchFile = getCurrentBranchFile();
-            writeContents(currentBranchFile, givenCommitId);
-            HashMap<String, String> emptyStageAdd = new HashMap<>();
-            writeObject(STAGE_ADD_FILE, emptyStageAdd);
-            HashSet<String> emptyStageRemove = new HashSet<>();
-            writeObject(STAGE_REMOVE_FILE, emptyStageRemove);
+            updateWorkingDirectory(currentCommit, givenCommit);
+            writeContents(getCurrentBranchFile(), givenCommitId);
+            clearStage();
             System.out.println("Current branch fast-forwarded.");
             return;
         }
-        File splitPointFile = join(COMMITS_DIR, splitPointId);
-        Commit splitPointCommit = readObject(splitPointFile, Commit.class);
-        HashMap<String, String> splitTrackedFiles = splitPointCommit.getTrackedFiles();
+
+        Commit splitPointCommit = readObject(
+                join(COMMITS_DIR, splitPointId), Commit.class);
+        HashMap<String, String> splitTrackedFiles =
+                splitPointCommit.getTrackedFiles();
+
         HashSet<String> allFileNames = new HashSet<>();
         allFileNames.addAll(splitTrackedFiles.keySet());
         allFileNames.addAll(currentTrackedFiles.keySet());
-        allFileNames.addAll(targetTrackedFiles.keySet());
+        allFileNames.addAll(givenTrackedFiles.keySet());
 
         boolean conflictOccurred = false;
 
         for (String fileName : allFileNames) {
             String splitBlobId = splitTrackedFiles.get(fileName);
             String currentBlobId = currentTrackedFiles.get(fileName);
-            String givenBlobId = targetTrackedFiles.get(fileName);
+            String givenBlobId = givenTrackedFiles.get(fileName);
 
             boolean currentChanged =
                     !Objects.equals(splitBlobId, currentBlobId);
@@ -491,66 +483,157 @@ public class Repository {
                     restoreFileFromCommit(givenCommit, fileName);
                     add(fileName);
                 }
-            } else if (currentChanged
-                    && givenChanged
+            } else if (currentChanged && givenChanged
                     && currentGivenDifferent) {
                 conflictOccurred = true;
-
-                String currentContent = "";
-                if (currentBlobId != null) {
-                    File currentBlobFile = join(BLOBS_DIR, currentBlobId);
-                    currentContent = readContentsAsString(currentBlobFile);
-                }
-
-                String givenContent = "";
-                if (givenBlobId != null) {
-                    File givenBlobFile = join(BLOBS_DIR, givenBlobId);
-                    givenContent = readContentsAsString(givenBlobFile);
-                }
-
-                String conflictContent =
-                        "<<<<<<< HEAD\n"
-                                + currentContent
-                                + "=======\n"
-                                + givenContent
-                                + ">>>>>>>\n";
-
-                File workingFile = join(CWD, fileName);
-                writeContents(workingFile, conflictContent);
+                writeConflictFile(fileName, currentBlobId, givenBlobId);
                 add(fileName);
             }
         }
-        String mergeMessage =
-                "Merged " + branchName + " into "
-                        + currentBranchName + ".";
 
-        commit(mergeMessage);
+        String mergeMessage =
+                "Merged " + branchName + " into " + currentBranchName + ".";
+        createMergeCommit(mergeMessage, currentCommitId, givenCommitId);
 
         if (conflictOccurred) {
             System.out.println("Encountered a merge conflict.");
         }
-
     }
 
-    private static String findSplitPoint(String currentCommitId, String givenCommitId) {
-        HashSet<String> currentAncestors = new HashSet<>();
-        while (currentCommitId != null) {
-            currentAncestors.add(currentCommitId);
-            File currentCommitFile = join(COMMITS_DIR, currentCommitId);
-            Commit currentCommit = readObject(currentCommitFile, Commit.class);
-            currentCommitId = currentCommit.getParentId();
-        }
+    private static String findSplitPoint(String currentCommitId,
+                                         String givenCommitId) {
+        HashMap<String, Integer> currentDistances =
+                getAncestorDistances(currentCommitId);
+        HashMap<String, Integer> givenDistances =
+                getAncestorDistances(givenCommitId);
 
-        String searchCommitId = givenCommitId;
-        while (searchCommitId != null) {
-            if (currentAncestors.contains(searchCommitId)) {
-                return searchCommitId;
+        String bestSplitPointId = null;
+        int bestDistance = Integer.MAX_VALUE;
+
+        for (String commitId : currentDistances.keySet()) {
+            if (givenDistances.containsKey(commitId)) {
+                int totalDistance = currentDistances.get(commitId)
+                        + givenDistances.get(commitId);
+                if (totalDistance < bestDistance) {
+                    bestDistance = totalDistance;
+                    bestSplitPointId = commitId;
+                }
             }
-            File searchCommitFile = join(COMMITS_DIR, searchCommitId);
-            Commit searchCommit = readObject(searchCommitFile, Commit.class);
-            searchCommitId = searchCommit.getParentId();
+        }
+        return bestSplitPointId;
+    }
+
+    private static HashMap<String, Integer> getAncestorDistances(
+            String startCommitId) {
+        HashMap<String, Integer> distances = new HashMap<>();
+        ArrayDeque<String> commitQueue = new ArrayDeque<>();
+        ArrayDeque<Integer> distanceQueue = new ArrayDeque<>();
+        commitQueue.add(startCommitId);
+        distanceQueue.add(0);
+
+        while (!commitQueue.isEmpty()) {
+            String commitId = commitQueue.remove();
+            int distance = distanceQueue.remove();
+            if (distances.containsKey(commitId)) {
+                continue;
+            }
+            distances.put(commitId, distance);
+
+            Commit commit = readObject(
+                    join(COMMITS_DIR, commitId), Commit.class);
+            String firstParentId = commit.getParentId();
+            String secondParentId = commit.getSecondParentId();
+
+            if (firstParentId != null) {
+                commitQueue.add(firstParentId);
+                distanceQueue.add(distance + 1);
+            }
+            if (secondParentId != null) {
+                commitQueue.add(secondParentId);
+                distanceQueue.add(distance + 1);
+            }
+        }
+        return distances;
+    }
+
+    private static void createMergeCommit(String message,
+                                          String firstParentId,
+                                          String secondParentId) {
+        HashMap<String, String> stageAdd =
+                readObject(STAGE_ADD_FILE, HashMap.class);
+        HashSet<String> stageRemove =
+                readObject(STAGE_REMOVE_FILE, HashSet.class);
+
+        HashMap<String, String> newTrackedFiles =
+                new HashMap<>(getHeadCommit().getTrackedFiles());
+        newTrackedFiles.putAll(stageAdd);
+        for (String fileName : stageRemove) {
+            newTrackedFiles.remove(fileName);
         }
 
-        return null;
+        Commit mergeCommit = new Commit(
+                message, firstParentId, secondParentId, newTrackedFiles);
+        String mergeCommitId = mergeCommit.getID();
+        writeObject(join(COMMITS_DIR, mergeCommitId), mergeCommit);
+        writeContents(getCurrentBranchFile(), mergeCommitId);
+        clearStage();
+    }
+
+    private static void writeConflictFile(String fileName,
+                                          String currentBlobId,
+                                          String givenBlobId) {
+        String currentContent = readBlobAsString(currentBlobId);
+        String givenContent = readBlobAsString(givenBlobId);
+        String conflictContent =
+                "<<<<<<< HEAD\n"
+                        + currentContent
+                        + "=======\n"
+                        + givenContent
+                        + ">>>>>>>\n";
+        writeContents(join(CWD, fileName), conflictContent);
+    }
+
+    private static String readBlobAsString(String blobId) {
+        if (blobId == null) {
+            return "";
+        }
+        return readContentsAsString(join(BLOBS_DIR, blobId));
+    }
+
+    private static void updateWorkingDirectory(Commit currentCommit,
+                                               Commit targetCommit) {
+        HashMap<String, String> currentTrackedFiles =
+                currentCommit.getTrackedFiles();
+        HashMap<String, String> targetTrackedFiles =
+                targetCommit.getTrackedFiles();
+
+        for (String fileName : targetTrackedFiles.keySet()) {
+            restoreFileFromCommit(targetCommit, fileName);
+        }
+        for (String fileName : currentTrackedFiles.keySet()) {
+            if (!targetTrackedFiles.containsKey(fileName)) {
+                restrictedDelete(join(CWD, fileName));
+            }
+        }
+    }
+
+    private static void clearStage() {
+        writeObject(STAGE_ADD_FILE, new HashMap<String, String>());
+        writeObject(STAGE_REMOVE_FILE, new HashSet<String>());
+    }
+
+    private static void printCommit(String commitId, Commit commit) {
+        System.out.println("===");
+        System.out.println("commit " + commitId);
+        if (commit.getSecondParentId() != null) {
+            String firstParent = commit.getParentId().substring(0, 7);
+            String secondParent =
+                    commit.getSecondParentId().substring(0, 7);
+            System.out.println(
+                    "Merge: " + firstParent + " " + secondParent);
+        }
+        System.out.println("Date: " + commit.getTimestamp());
+        System.out.println(commit.getMessage());
+        System.out.println();
     }
 }
