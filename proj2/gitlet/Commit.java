@@ -1,7 +1,5 @@
 package gitlet;
 
-// TODO: any imports you need here
-
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
@@ -30,7 +28,6 @@ public class Commit implements Serializable {
     /** The message of this Commit. */
     private String message;
 
-    /* TODO: fill in the rest of this class. */
     public Commit() {
         this.message = "initial commit";
         this.timestamp = "Thu Jan 1 00:00:00 1970 +0000";
