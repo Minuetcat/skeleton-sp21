@@ -6,7 +6,7 @@ package gitlet;
 public class Main {
 
     /** Usage: java gitlet.Main ARGS, where ARGS contains
-     *  <COMMAND> <OPERAND1> <OPERAND2> ... 
+     *  <COMMAND> <OPERAND1> <OPERAND2> ...
      */
     public static void main(String[] args) {
         if (args.length == 0) {
@@ -99,14 +99,6 @@ public class Main {
                 Repository.rmBranch(args[1]);
                 break;
 
-            case "reset":
-                if (args.length != 2) {
-                    System.out.println("Incorrect operands.");
-                    return;
-                }
-                Repository.reset(args[1]);
-                break;
-
             case "checkout":
                 if (args.length == 3 && args[1].equals("--")) {
                     Repository.checkoutFile(args[2]);
@@ -117,6 +109,22 @@ public class Main {
                 } else {
                     System.out.println("Incorrect operands.");
                 }
+                break;
+
+            case "reset":
+                if (args.length != 2) {
+                    System.out.println("Incorrect operands.");
+                    return;
+                }
+                Repository.reset(args[1]);
+                break;
+
+            case "merge":
+                if (args.length != 2) {
+                    System.out.println("Incorrect operands.");
+                    return;
+                }
+                Repository.merge(args[1]);
                 break;
 
             default:
