@@ -56,31 +56,6 @@ public class Repository {
         writeContents(masterBranchFile, initialCommitId);
     }
 
-    public static void rm(String fileName) {
-        HashMap<String, String> stageAdd = readObject(STAGE_ADD_FILE, HashMap.class);
-        Commit headCommit = getHeadCommit();
-        HashMap<String, String> trackedFiles = headCommit.getTrackedFiles();
-
-        boolean stageForAddition = stageAdd.containsKey(fileName);
-        boolean trackedByHead = trackedFiles.containsKey(fileName);
-
-        if (!stageForAddition && !trackedByHead) {
-            System.out.println("No reason to remove the file.");
-            return;
-        }
-        if (stageForAddition) {
-            stageAdd.remove(fileName);
-            writeObject(STAGE_ADD_FILE, stageAdd);
-        }
-        if (trackedByHead) {
-            HashSet<String> stageRemove = readObject(STAGE_REMOVE_FILE, HashSet.class);
-            stageRemove.add(fileName);
-            writeObject(STAGE_REMOVE_FILE, stageRemove);
-            File workingFile = join(CWD, fileName);
-            restrictedDelete(workingFile);
-        }
-    }
-
     public static void add(String fileName) {
         File fileToAdd = join(CWD, fileName);
         if (!fileToAdd.exists()) {
@@ -111,6 +86,31 @@ public class Repository {
         }
         stageAdd.put(fileName, blobId);
         writeObject(STAGE_ADD_FILE, stageAdd);
+    }
+
+    public static void rm(String fileName) {
+        HashMap<String, String> stageAdd = readObject(STAGE_ADD_FILE, HashMap.class);
+        Commit headCommit = getHeadCommit();
+        HashMap<String, String> trackedFiles = headCommit.getTrackedFiles();
+
+        boolean stageForAddition = stageAdd.containsKey(fileName);
+        boolean trackedByHead = trackedFiles.containsKey(fileName);
+
+        if (!stageForAddition && !trackedByHead) {
+            System.out.println("No reason to remove the file.");
+            return;
+        }
+        if (stageForAddition) {
+            stageAdd.remove(fileName);
+            writeObject(STAGE_ADD_FILE, stageAdd);
+        }
+        if (trackedByHead) {
+            HashSet<String> stageRemove = readObject(STAGE_REMOVE_FILE, HashSet.class);
+            stageRemove.add(fileName);
+            writeObject(STAGE_REMOVE_FILE, stageRemove);
+            File workingFile = join(CWD, fileName);
+            restrictedDelete(workingFile);
+        }
     }
 
     public static void commit(String message) {
@@ -188,9 +188,50 @@ public class Repository {
         }
     }
 
+    public static void status() {
+        System.out.println("=== Branches ===");
+        List<String> branchNames = plainFilenamesIn(BRANCHES_DIR);
+        for (String branchName : branchNames) {
+            if (branchName.equals(getCurrentBranchName())) {
+                System.out.print("*");
+            }
+            System.out.println(branchName);
+        }
+        System.out.println();
+
+        System.out.println("=== Staged Files ===");
+        HashMap<String, String> stageAdd = readObject(STAGE_ADD_FILE, HashMap.class);
+        List<String> addFileNames =  new ArrayList<>(stageAdd.keySet());
+        Collections.sort(addFileNames);
+        for (String addFileName : addFileNames) {
+            System.out.println(addFileName);
+        }
+        System.out.println();
+
+        System.out.println("=== Removed Files ===");
+        HashSet<String> stageRemove = readObject(STAGE_REMOVE_FILE, HashSet.class);
+        List<String> removeFileNames = new ArrayList<>(stageRemove);
+        Collections.sort(removeFileNames);
+        for (String removeFileName : removeFileNames) {
+            System.out.println(removeFileName);
+        }
+        System.out.println();
+    }
+
     public static void checkoutFile(String fileName) {
         Commit headCommit = getHeadCommit();
         restoreFileFromCommit(headCommit, fileName);
+        return;
+    }
+
+    public static void checkoutFileFromCommit(String commitId, String fileName) {
+        File commitFile = join(COMMITS_DIR, commitId);
+        if (!commitFile.exists()) {
+            System.out.println("No commit with that id exists.");
+            return;
+        }
+        Commit commit = readObject(commitFile, Commit.class);
+        restoreFileFromCommit(commit, fileName);
         return;
     }
 
@@ -243,15 +284,26 @@ public class Repository {
         writeObject(STAGE_REMOVE_FILE, emptyStageRemove);
     }
 
-    public static void checkoutFileFromCommit(String commitId, String fileName) {
-        File commitFile = join(COMMITS_DIR, commitId);
-        if (!commitFile.exists()) {
-            System.out.println("No commit with that id exists.");
+    public static void branch(String branchName) {
+        File branchFile = join(BRANCHES_DIR, branchName);
+        if (branchFile.exists()) {
+            System.out.println("A branch with that name already exists.");
             return;
         }
-        Commit commit = readObject(commitFile, Commit.class);
-        restoreFileFromCommit(commit, fileName);
-        return;
+        writeContents(branchFile, getCurrentCommitId());
+    }
+
+    public static void rmBranch(String branchName) {
+        File branchFile = join(BRANCHES_DIR, branchName);
+        if (!branchFile.exists()) {
+            System.out.println("A branch with that name does not exist.");
+            return;
+        }
+        if (branchName.equals(getCurrentBranchName())) {
+            System.out.println("Cannot remove the current branch.");
+            return;
+        }
+        branchFile.delete();
     }
 
     private static void restoreFileFromCommit(Commit commit, String fileName) {
@@ -276,63 +328,12 @@ public class Repository {
     private static String getCurrentBranchName() {
         return readContentsAsString(HEAD_FILE);
     }
+
     private static File getCurrentBranchFile() {
         return join(BRANCHES_DIR, getCurrentBranchName());
     }
 
     private static String getCurrentCommitId() {
         return readContentsAsString(getCurrentBranchFile());
-    }
-
-    public static void status() {
-        System.out.println("=== Branches ===");
-        List<String> branchNames = plainFilenamesIn(BRANCHES_DIR);
-        for (String branchName : branchNames) {
-            if (branchName.equals(getCurrentBranchName())) {
-                System.out.print("*");
-            }
-            System.out.println(branchName);
-        }
-        System.out.println();
-
-        System.out.println("=== Staged Files ===");
-        HashMap<String, String> stageAdd = readObject(STAGE_ADD_FILE, HashMap.class);
-        List<String> addFileNames =  new ArrayList<>(stageAdd.keySet());
-        Collections.sort(addFileNames);
-        for (String addFileName : addFileNames) {
-            System.out.println(addFileName);
-        }
-        System.out.println();
-
-        System.out.println("=== Removed Files ===");
-        HashSet<String> stageRemove = readObject(STAGE_REMOVE_FILE, HashSet.class);
-        List<String> removeFileNames = new ArrayList<>(stageRemove);
-        Collections.sort(removeFileNames);
-        for (String removeFileName : removeFileNames) {
-            System.out.println(removeFileName);
-        }
-        System.out.println();
-    }
-
-    public static void branch(String branchName) {
-        File branchFile = join(BRANCHES_DIR, branchName);
-        if (branchFile.exists()) {
-            System.out.println("A branch with that name already exists.");
-            return;
-        }
-        writeContents(branchFile, getCurrentCommitId());
-    }
-
-    public static void rmBranch(String branchName) {
-        File branchFile = join(BRANCHES_DIR, branchName);
-        if (!branchFile.exists()) {
-            System.out.println("A branch with that name does not exist.");
-            return;
-        }
-        if (branchName.equals(getCurrentBranchName())) {
-            System.out.println("Cannot remove the current branch.");
-            return;
-        }
-        branchFile.delete();
     }
 }
