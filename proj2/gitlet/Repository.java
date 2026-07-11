@@ -3,6 +3,8 @@ package gitlet;
 import java.io.File;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
+
 import static gitlet.Utils.*;
 
 /** Represents a gitlet repository.
@@ -33,6 +35,7 @@ public class Repository {
     public static final File STAGE_ADD_FILE = join(GITLET_DIR, "stageAdd");
     public static final File STAGE_REMOVE_FILE = join(GITLET_DIR, "stageRemove");
     public static final File HEAD_FILE = join(GITLET_DIR, "HEAD");
+    public static final File BRANCHES_DIR = join(GITLET_DIR, "branches");
 
     public static void init() {
         if (GITLET_DIR.exists()) {
@@ -42,6 +45,7 @@ public class Repository {
         GITLET_DIR.mkdir();
         COMMITS_DIR.mkdir();
         BLOBS_DIR.mkdir();
+        BRANCHES_DIR.mkdir();
         HashMap<String, String> stageAdd = new HashMap<>();
         HashSet<String> stageRemove = new HashSet<>();
         writeObject(STAGE_ADD_FILE, stageAdd);
@@ -50,7 +54,9 @@ public class Repository {
         String initialCommitId = initialCommit.getID();
         File initialCommitFile = join(COMMITS_DIR, initialCommitId);
         writeObject(initialCommitFile, initialCommit);
-        writeContents(HEAD_FILE, initialCommitId);
+        writeContents(HEAD_FILE, "master");
+        File masterBranchFile = join(BRANCHES_DIR, "master");
+        writeContents(masterBranchFile, initialCommitId);
     }
 
     public static void rm(String fileName) {
@@ -155,6 +161,36 @@ public class Repository {
         }
     }
 
+    public static void globalLog() {
+        List<String> commitFileNames = plainFilenamesIn(COMMITS_DIR);
+        for (String commitId : commitFileNames) {
+            File commitfile = join(COMMITS_DIR, commitId);
+            Commit commit = readObject(commitfile, Commit.class);
+
+            System.out.println("===");
+            System.out.println("commit " + commitId);
+            System.out.println("Date: " + commit.getTimestamp());
+            System.out.println(commit.getMessage());
+            System.out.println();
+        }
+    }
+
+    public static void find(String message) {
+        List<String> commitFileNames = plainFilenamesIn(COMMITS_DIR);
+        boolean found = false;
+        for (String commitId : commitFileNames) {
+            File commitfile = join(COMMITS_DIR, commitId);
+            Commit commit = readObject(commitfile, Commit.class);
+            if (commit.getMessage().equals(message)) {
+                System.out.println(commitId);
+                found = true;
+            }
+        }
+        if (!found) {
+            System.out.println("Found no commit with that message.");
+        }
+    }
+
     public static void checkoutFile(String fileName) {
         Commit headCommit = getHeadCommit();
         restoreFileFromCommit(headCommit, fileName);
@@ -186,7 +222,9 @@ public class Repository {
     }
 
     private static Commit getHeadCommit() {
-        String headCommitId = readContentsAsString(HEAD_FILE);
+        String currentBranchName = readContentsAsString(HEAD_FILE);
+        File currentBranchFile = join(BRANCHES_DIR, currentBranchName);
+        String headCommitId = readContentsAsString(currentBranchFile);
         File headCommitFile = join(COMMITS_DIR, headCommitId);
         return readObject(headCommitFile, Commit.class);
     }
