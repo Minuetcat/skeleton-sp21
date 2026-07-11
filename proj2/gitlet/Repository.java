@@ -6,15 +6,14 @@ import java.util.*;
 import static gitlet.Utils.*;
 
 /** Represents a gitlet repository.
- *  TODO: It's a good idea to give a description here of what else this Class
+ *  a class about repository for gitlet.
  *  does at a high level.
  *
- *  @author TODO
+ *  @author minuet
  */
 public class Repository {
     /**
-     * TODO: add instance variables here.
-     *
+     * Add instance variables here.
      * List all instance variables of the Repository class here with a useful
      * comment above them describing what that variable represents and how that
      * variable is used. We've provided two examples for you.
@@ -161,12 +160,12 @@ public class Repository {
 
     public static void globalLog() {
         List<String> commitFileNames = plainFilenamesIn(COMMITS_DIR);
-        for (String commitId : commitFileNames) {
-            File commitFile = join(COMMITS_DIR, commitId);
+        for (String commitFileName : commitFileNames) {
+            File commitFile = join(COMMITS_DIR, commitFileName);
             Commit commit = readObject(commitFile, Commit.class);
 
             System.out.println("===");
-            System.out.println("commit " + commitId);
+            System.out.println("commit " + commitFileName);
             System.out.println("Date: " + commit.getTimestamp());
             System.out.println(commit.getMessage());
             System.out.println();
@@ -176,11 +175,11 @@ public class Repository {
     public static void find(String message) {
         List<String> commitFileNames = plainFilenamesIn(COMMITS_DIR);
         boolean found = false;
-        for (String commitId : commitFileNames) {
-            File commitFile = join(COMMITS_DIR, commitId);
+        for (String commitFileName : commitFileNames) {
+            File commitFile = join(COMMITS_DIR, commitFileName);
             Commit commit = readObject(commitFile, Commit.class);
             if (commit.getMessage().equals(message)) {
-                System.out.println(commitId);
+                System.out.println(commitFileName);
                 found = true;
             }
         }
@@ -193,6 +192,24 @@ public class Repository {
         Commit headCommit = getHeadCommit();
         restoreFileFromCommit(headCommit, fileName);
         return;
+    }
+
+    public static void checkoutBranch(String branchName) {
+        File branchFile = join(BRANCHES_DIR, branchName);
+        if (branchFile.exists()) {
+            System.out.println("No such branch exists.");
+            return;
+        }
+        if (branchName.equals(getCurrentBranchName())) {
+            System.out.println("No need to checkout the current branch.");
+            return;
+        }
+        String targetCommitId = readContentsAsString(branchFile);
+        File targetCommitFile = join(COMMITS_DIR, targetCommitId);
+        Commit targetCommit = readObject(targetCommitFile, Commit.class);
+        Commit currentCommit = getHeadCommit();
+        HashMap<String, String> targetTrackedFiles = targetCommit.getTrackedFiles();
+        HashMap<String, String> currentTrackedFiles = currentCommit.getTrackedFiles();
     }
 
     public static void checkoutFileFromCommit(String commitId, String fileName) {
@@ -273,5 +290,18 @@ public class Repository {
             return;
         }
         writeContents(branchFile, getCurrentCommitId());
+    }
+
+    public static void rmBranch(String branchName) {
+        File branchFile = join(BRANCHES_DIR, branchName);
+        if (!branchFile.exists()) {
+            System.out.println("A branch with that name does not exist.");
+            return;
+        }
+        if (branchName.equals(getCurrentBranchName())) {
+            System.out.println("Cannot remove the current branch.");
+            return;
+        }
+        branchFile.delete();
     }
 }
