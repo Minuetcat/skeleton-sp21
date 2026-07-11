@@ -271,12 +271,9 @@ public class Repository {
         }
 
         for (String fileName : targetTrackedFiles.keySet()) {
-            String blobId = targetTrackedFiles.get(fileName);
-            File blobFile = join(BLOBS_DIR, blobId);
-            byte[] fileContent = readContents(blobFile);
-            File workingFile = join(CWD, fileName);
-            writeContents(workingFile, fileContent);
+            restoreFileFromCommit(targetCommit, fileName);
         }
+
         for (String fileName : currentTrackedFiles.keySet()) {
             if (!targetTrackedFiles.containsKey(fileName)) {
                 File workingFile = join(CWD, fileName);
@@ -356,5 +353,47 @@ public class Repository {
             }
         }
         return null;
+    }
+
+    public static void reset(String commitId) {
+        String fullCommitId = findFullCommitId(commitId);
+        if (fullCommitId == null) {
+            System.out.println("No commit with that id exists.");
+            return;
+        }
+        File targetCommitFile = join(COMMITS_DIR, fullCommitId);
+        Commit targetCommit = readObject(targetCommitFile, Commit.class);
+        Commit currentCommit = getHeadCommit();
+        HashMap<String, String> targetTrackedFiles = targetCommit.getTrackedFiles();
+        HashMap<String, String> currentTrackedFiles = currentCommit.getTrackedFiles();
+
+        List<String> workingFileNames = plainFilenamesIn(CWD);
+        for (String fileName : workingFileNames) {
+            boolean trackedByCurrent = currentTrackedFiles.containsKey(fileName);
+            boolean trackedByTarget = targetTrackedFiles.containsKey(fileName);
+
+            if (!trackedByCurrent && trackedByTarget) {
+                System.out.println("There is an untracked file in the way; " + "delete it, or add and commit it first.");
+                return;
+            }
+        }
+
+        for (String fileName : targetTrackedFiles.keySet()) {
+            restoreFileFromCommit(targetCommit, fileName);
+        }
+
+        for (String fileName : currentTrackedFiles.keySet()) {
+            if (!targetTrackedFiles.containsKey(fileName)) {
+                File workingFile = join(CWD, fileName);
+                restrictedDelete(workingFile);
+            }
+        }
+
+        File currentBranchFile = getCurrentBranchFile();
+        writeContents(currentBranchFile, fullCommitId);
+        HashMap<String, String> emptyStageAdd = new HashMap<>();
+        writeObject(STAGE_ADD_FILE, emptyStageAdd);
+        HashSet<String> emptyStageRemove = new HashSet<>();
+        writeObject(STAGE_REMOVE_FILE, emptyStageRemove);
     }
 }
