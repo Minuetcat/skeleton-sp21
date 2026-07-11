@@ -216,6 +216,12 @@ public class Repository {
             System.out.println(removeFileName);
         }
         System.out.println();
+
+        System.out.println("=== Modifications Not Staged For Commit ===");
+        System.out.println();
+
+        System.out.println("=== Untracked Files ===");
+        System.out.println();
     }
 
     public static void checkoutFile(String fileName) {
@@ -225,11 +231,12 @@ public class Repository {
     }
 
     public static void checkoutFileFromCommit(String commitId, String fileName) {
-        File commitFile = join(COMMITS_DIR, commitId);
-        if (!commitFile.exists()) {
+        String fullCommitId = findFullCommitId(commitId);
+        if (fullCommitId == null) {
             System.out.println("No commit with that id exists.");
             return;
         }
+        File commitFile = join(COMMITS_DIR, fullCommitId);
         Commit commit = readObject(commitFile, Commit.class);
         restoreFileFromCommit(commit, fileName);
         return;
@@ -335,5 +342,19 @@ public class Repository {
 
     private static String getCurrentCommitId() {
         return readContentsAsString(getCurrentBranchFile());
+    }
+
+    private static String findFullCommitId(String commitId) {
+        File exactCommitFile = join(COMMITS_DIR, commitId);
+        if (exactCommitFile.exists()) {
+            return commitId;
+        }
+        List<String> commitFileNames = plainFilenamesIn(COMMITS_DIR);
+        for (String fullCommitId : commitFileNames) {
+            if (fullCommitId.startsWith(commitId)) {
+                return fullCommitId;
+            }
+        }
+        return null;
     }
 }
